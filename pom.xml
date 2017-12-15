@@ -3,9 +3,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.devontrain</groupId>
-    <artifactId>jex</artifactId>
-    <version>1.0.0</version>
+    <groupId>com.devontrain.jex</groupId>
+    <artifactId>jex-executors</artifactId>
+    <version>1.0.1-SNAPSHOT</version>
     <name>jex</name>
     <description>Aim of this framework is to extend JAVA platform with more useful utilities.</description>
     <url>https://github.com/piotr-tarnowski/jex</url>

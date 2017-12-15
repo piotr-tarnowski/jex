@@ -12,6 +12,7 @@ import static com.devontrain.jex.executors.tasks.*;
 /**
  * Created by @author <a href="mailto:piotr.tarnowski.dev@gmail.com">Piotr Tarnowski</a> on 28.07.17.
  */
+@SuppressWarnings("unchecked")
 public enum ContextResolvingStrategy {
 
     RESOLVE_CONTEXT_IN_CALLER_THREAD(
@@ -24,25 +25,19 @@ public enum ContextResolvingStrategy {
     final Function<ExecutorBase, BiConsumer> contextStrategy;
     final Function<ExecutorBase, TriConsumer> associationStrategy;
 
-    ContextResolvingStrategy(Function<ExecutorBase, BiConsumer> contextStrategy, Function<ExecutorBase, TriConsumer> associationStrategy) {
+    ContextResolvingStrategy(Function<ExecutorBase, BiConsumer> contextStrategy,
+                             Function<ExecutorBase, TriConsumer> associationStrategy) {
         this.contextStrategy = contextStrategy;
         this.associationStrategy = associationStrategy;
     }
 
 
     private static <K, C extends Context<K>> BiConsumer<K, CompletableTask> resolveContextInCallerThread(ExecutorBase<K, C> pool) {
-        return (key, task) -> {
-            BooleanHolder holder = new BooleanHolder();
-            C context = resolveContext(pool, key, ctx -> task, holder);
-            invokeInCallerThread(pool, task, holder, context);
-        };
+        return (key, task) -> invokeInCallerThread(pool, key, task, ctx -> task);
     }
 
     private static <K, C extends Context<K>> BiConsumer<K, CompletableTask> resolveContextInTaskThread(ExecutorBase<K, C> pool) {
-        return (key, task) -> {
-            Function<Context<K>, Consumer<Context<K>>> supplier = ctx -> task;
-            invokeInTaskThread(pool, key, task, supplier);
-        };
+        return (key, task) -> invokeInTaskThread(pool, key, task, ctx -> task);
     }
 
     private static <K, C extends Context<K>> TriConsumer<K, Function<Context<K>, Object>, CompletableTask> resolveAssociateInCallerThread(ExecutorBase<K, C> pool) {
@@ -77,7 +72,12 @@ public enum ContextResolvingStrategy {
         };
     }
 
-    private static <K, C extends Context<K>> void invokeInCallerThread(ExecutorBase<K, C> pool, CompletableTask task, BooleanHolder holder, C context) {
+    private static <K, C extends Context<K>> void invokeInCallerThread(ExecutorBase<K, C> pool,
+                                                                       K key,
+                                                                       CompletableTask task,
+                                                                       Function<Context<K>, Consumer<Context<K>>> supplier) {
+        BooleanHolder holder = new BooleanHolder();
+        C context = resolveContext(pool, key, supplier, holder);
         if (holder.getAsBoolean()) {
             pool.execute(() -> {
                 context.processor = Thread.currentThread();
@@ -86,7 +86,10 @@ public enum ContextResolvingStrategy {
         }
     }
 
-    private static <K, C extends Context<K>> void invokeInTaskThread(ExecutorBase<K, C> pool, K key, CompletableTask task, Function<Context<K>, Consumer<Context<K>>> supplier) {
+    private static <K, C extends Context<K>> void invokeInTaskThread(ExecutorBase<K, C> pool,
+                                                                     K key,
+                                                                     CompletableTask task,
+                                                                     Function<Context<K>, Consumer<Context<K>>> supplier) {
         pool.execute(() -> {
             BooleanHolder holder = new BooleanHolder();
             C context = resolveContext(pool, key, supplier, holder);
@@ -98,7 +101,10 @@ public enum ContextResolvingStrategy {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, C extends Context<K>> C resolveContext(ExecutorBase<K, C> pool, K key, Function<Context<K>, ? extends Consumer> supplier, BooleanHolder holder) {
+    private static <K, C extends Context<K>> C resolveContext(ExecutorBase<K, C> pool,
+                                                              K key,
+                                                              Function<Context<K>, ? extends Consumer> supplier,
+                                                              BooleanHolder holder) {
         return pool.contexts.compute(key, (k, ctx) -> {
             if (ctx == null) {
                 ctx = (C) pool.resolver.apply(pool, k);

@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static com.devontrain.jex.executors.ContextClosingStrategy.REMOVE_CONTEXT_AFTER_LAST_TASK;
 import static com.devontrain.jex.executors.ContextExecutionStrategy.ASSOCIATE;
@@ -27,6 +28,7 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
     private ContextClosingStrategy contextClosingStrategy;
     private ContextExecutionStrategy contextExecutionStrategy;
     private ContextResolvingStrategy contextResolvingStrategy;
+    private Predicate<C> interruptionStrategy;
     private int tasksLimit = -1;
     private int joinTimeOut = -1;
 
@@ -55,6 +57,11 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
         return this;
     }
 
+    public final ContextualExecutorBuilder<K, C> interruptionStrategy(Predicate<C> interruptionStrategy) {
+        this.interruptionStrategy = interruptionStrategy;
+        return this;
+    }
+
     public final ContextualExecutorBuilder<K, C> taskLimit(int tasksLimit) {
         this.tasksLimit = tasksLimit;
         return this;
@@ -65,7 +72,7 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
         return this;
     }
 
-    void initialize(Function association) {
+    private void initialize(Function association) {
         if (executor == null) {
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         }
@@ -86,6 +93,9 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
         if (contextResolvingStrategy == null) {
             contextResolvingStrategy = RESOLVE_CONTEXT_IN_CALLER_THREAD;
         }
+        if (interruptionStrategy == null) {
+            interruptionStrategy = t -> false;
+        }
         if (tasksLimit < 0) {
             tasksLimit = 100;
         }
@@ -104,12 +114,14 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
                 contextClosingStrategy,
                 contextExecutionStrategy,
                 contextResolvingStrategy,
+                interruptionStrategy,
                 tasksLimit,
                 joinTimeOut
         );
     }
 
-    public final <A extends Associate<T>, T extends Context<K>> AssociateableExecutor<K, T, A> build(Class<A> clazz, Function<T, A> association) {
+    public final <A extends Associate<T>, T extends Context<K>> AssociateableExecutor<K, T, A> build(Class<A> clazz,
+                                                                                                     Function<T, A> association) {
         initialize(association);
         return new AssociateableExecutor<K, T, A>(
                 executor,
@@ -119,6 +131,7 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
                 contextClosingStrategy,
                 contextExecutionStrategy,
                 contextResolvingStrategy,
+                (Predicate) interruptionStrategy,
                 tasksLimit,
                 joinTimeOut
         );

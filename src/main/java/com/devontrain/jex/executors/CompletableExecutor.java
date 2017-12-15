@@ -1,5 +1,10 @@
 package com.devontrain.jex.executors;
 
+import com.devontrain.jex.executors.tasks.CallableTask;
+import com.devontrain.jex.executors.tasks.RunnableTask;
+import com.sun.istack.internal.NotNull;
+
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -8,34 +13,38 @@ import java.util.concurrent.*;
  */
 public class CompletableExecutor extends AbstractExecutorService {
 
-    final ExecutorService service;
+    private final ExecutorService service;
 
     public CompletableExecutor(ExecutorService service) {
         this.service = service;
     }
 
     @Override
-    public void execute(Runnable command) {
+    public void execute(@Nonnull Runnable command) {
         service.execute(command);
     }
 
     @Override
-    public CompletableFuture<?> submit(Runnable task) {
-        tasks.RunnableTask<Boolean> future = new tasks.RunnableTask<>(task, Boolean.TRUE);
+    @Nonnull
+    public CompletableFuture<?> submit(@Nonnull Runnable task) {
+        RunnableTask<Boolean> future = new RunnableTask<>(task, Boolean.TRUE);
         execute(future);
         return future;
     }
 
     @Override
-    public <T> CompletableFuture<T> submit(Callable<T> task) {
-        tasks.CallableTask<T> future = new tasks.CallableTask<>(task);
+    @Nonnull
+    public <T> CompletableFuture<T> submit(@Nonnull Callable<T> task) {
+        CallableTask<T> future = new CallableTask<>(task);
         execute(future);
         return future;
     }
 
     @Override
-    public <T> CompletableFuture<T> submit(Runnable task, T result) {
-        tasks.RunnableTask<T> future = new tasks.RunnableTask<>(task, result);
+    @Nonnull
+    public <T> CompletableFuture<T> submit(@Nonnull Runnable task,
+                                           T result) {
+        RunnableTask<T> future = new RunnableTask<>(task, result);
         execute(future);
         return future;
     }
@@ -46,6 +55,7 @@ public class CompletableExecutor extends AbstractExecutorService {
     }
 
     @Override
+    @Nonnull
     public List<Runnable> shutdownNow() {
         return service.shutdownNow();
     }
@@ -61,7 +71,8 @@ public class CompletableExecutor extends AbstractExecutorService {
     }
 
     @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean awaitTermination(long timeout,
+                                    @Nonnull TimeUnit unit) throws InterruptedException {
         return service.awaitTermination(timeout, unit);
     }
 }

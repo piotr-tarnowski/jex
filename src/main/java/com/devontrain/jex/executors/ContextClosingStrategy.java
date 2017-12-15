@@ -1,7 +1,6 @@
 package com.devontrain.jex.executors;
 
 
-
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -22,23 +21,23 @@ public enum ContextClosingStrategy {
 
     private static <K, C extends Context<K>> BiConsumer<K, Consumer<Consumer<Context<K>>>> leaveContextAfterLastTask(ExecutorBase<K, C> pool) {
         return (key, consumer) ->
-                pool.contexts.computeIfPresent(key, (k, ctx) -> {
-                    ctx.tasks.poll();
-                    consumer.accept(ctx.tasks.peek());
-                    return ctx;
-                });
+                pool.contexts.computeIfPresent(key, (k, ctx) -> computeForContext(ctx, consumer, c -> c));
     }
 
     private static <K, C extends Context<K>> BiConsumer<K, Consumer<Consumer<Context<K>>>> removeContextAfterLastTask(ExecutorBase<K, C> pool) {
         return (key, consumer) ->
-                pool.contexts.computeIfPresent(key, (k, ctx) -> {
-                    ctx.tasks.poll();
-                    if (ctx.tasks.isEmpty()) {
-                        return null;
-                    }
-                    consumer.accept(ctx.tasks.peek());
-                    return ctx;
-                });
+                pool.contexts.computeIfPresent(key, (k, ctx) -> computeForContext(ctx, consumer, c -> null));
     }
 
+    private static <K, C extends Context<K>> C computeForContext(
+            C ctx,
+            Consumer<Consumer<Context<K>>> consumer,
+            Function<C, C> lastTaskAction) {
+        ctx.tasks.poll();
+        if (ctx.tasks.isEmpty()) {
+            return lastTaskAction.apply(ctx);
+        }
+        consumer.accept(ctx.tasks.peek());
+        return ctx;
+    }
 }

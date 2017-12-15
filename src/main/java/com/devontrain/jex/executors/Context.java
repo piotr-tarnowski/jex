@@ -19,6 +19,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 /**
  * Created by @author <a href="mailto:piotr.tarnowski.dev@gmail.com">Piotr Tarnowski</a> on 09.08.17.
  */
+@SuppressWarnings("unchecked")
 public class Context<K> {
 
     private static final Logger LOGGER = Logger.getLogger("SCHEDULER");
@@ -26,21 +27,20 @@ public class Context<K> {
     private static final ScheduledExecutorService SCHEDULER = Executors.newScheduledThreadPool(1);
 
     protected final K key;
-    final ExecutorBase<K, Context<K>> executor;
+    private final ExecutorBase<K, Context<K>> executor;
     final LinkedList<Consumer<Context<K>>> tasks;
-    List<Consumer<Context<K>>> subtasks;
+    private List<Consumer<Context<K>>> subtasks;
     boolean paused;
     Thread processor;
 
     //TODO: try to remove this suppress warnings
-    @SuppressWarnings("unchecked")
-    protected Context(ExecutorBase executor, K key) {
+    protected Context(ExecutorBase executor,
+                      K key) {
         this.executor = executor;
         this.key = key;
         this.tasks = new LinkedList<>();
     }
 
-    @SuppressWarnings("unchecked")
     <A> A createAssociate() {
         return (A) executor.association.apply(this);
     }
@@ -58,7 +58,8 @@ public class Context<K> {
         return joinInSync(future, executor.joinTimeOut);
     }
 
-    final <T> CompletableFuture<T> joinInSync(CompletableFuture<T> future, int timeout) {
+    final <T> CompletableFuture<T> joinInSync(CompletableFuture<T> future,
+                                              int timeout) {
         ensureRunInSync();
         CompletableFuture<T> result = new CompletableFuture<>();
         process(subtasks, () -> {
@@ -76,7 +77,8 @@ public class Context<K> {
         return result;
     }
 
-    final CompletableFuture<?> process(List jobs, CompletableTask task) {
+    private CompletableFuture<?> process(List jobs,
+                                       CompletableTask task) {
         if (paused) {
             if (jobs == null) {
                 jobs = subtasks = tasks.subList(0, 1);
@@ -88,18 +90,20 @@ public class Context<K> {
         return task;
     }
 
-    final CompletableFuture<?> process(List jobs, Runnable runnable) {
+    private CompletableFuture<?> process(List jobs,
+                                         Runnable runnable) {
         return process(jobs, new RunnableTask<>(runnable, Boolean.TRUE));
     }
 
-    final void ensureRunInSync() {
+    private void ensureRunInSync() {
         if (this.processor != currentThread()) {
             throw new IllegalStateException("Method joinInSync can be invoke only in runInSync block.");
         }
     }
 
     @Nonnull
-    <T> CompletableFuture<T> within(CompletableFuture<T> future, long timeout) {
+    private <T> CompletableFuture<T> within(CompletableFuture<T> future,
+                                            long timeout) {
         ScheduledFuture<?> schedule = SCHEDULER.scheduleAtFixedRate(() -> {
             if (tasks.size() < executor.tasksLimit) {
                 LOGGER.warning(() -> "Future  " + future + " reached its timeout " + timeout + "[ms]");

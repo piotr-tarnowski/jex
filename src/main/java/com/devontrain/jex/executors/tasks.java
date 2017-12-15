@@ -1,7 +1,6 @@
 package com.devontrain.jex.executors;
 
 import com.devontrain.jex.common.Holder;
-;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -17,7 +16,9 @@ final class tasks {
     }
 
     interface TriConsumer<T, U, W> {
-        void accept(T t, U u, W w);
+        void accept(T t,
+                    U u,
+                    W w);
     }
 
     static class EmptyTask<T> extends CompletableTask<T> {
@@ -38,7 +39,8 @@ final class tasks {
 
         private final Runnable runnable;
 
-        RunnableTask(Runnable runnable, T defaultValue) {
+        RunnableTask(Runnable runnable,
+                     T defaultValue) {
             super(defaultValue);
             this.runnable = runnable;
         }
@@ -95,10 +97,11 @@ final class tasks {
         }
     }
 
-    abstract static class CompletableTask<T> extends CompletableFuture<T> implements Consumer<Object>, Runnable {
+    abstract static class CompletableTask<T> extends CompletableFuture<T> implements Consumer, Runnable {
 
         @SuppressWarnings("unchecked")
-        final <K, C extends Context<K>> void run(ExecutorBase<K, C> executor, C context) {
+        final <K, C extends Context<K>> void run(ExecutorBase<K, C> executor,
+                                                 C context) {
             tasks.run(executor, context, new Holder<>(this));
         }
 
@@ -120,13 +123,20 @@ final class tasks {
     }
 
     @SuppressWarnings("unchecked")
-    static <K, C extends Context<K>> void run(ExecutorBase<K, C> executor, C context, Holder<CompletableTask> holder) {
-        Consumer<C> task;
-        while ((task = holder.reset()) != null) {
-            task.accept(context);
-            executor.contextClosingStrategy.accept(context.key, holder);
-            if (context.paused) {
+    static <K, C extends Context<K>> void run(ExecutorBase<K, C> executor,
+                                              C context,
+                                              Holder<? extends Consumer> holder) {
+        while (holder.get() != null) {
+            boolean interrupt = Thread.interrupted() || executor.interruptionStrategy.test(context);
+            if (interrupt) {
+                executor.execute(() -> run(executor, context, holder));
                 break;
+            } else {
+                holder.reset().accept(context);
+                executor.contextClosingStrategy.accept(context.key, holder);
+                if (context.paused) {
+                    break;
+                }
             }
         }
         context.processor = null;
