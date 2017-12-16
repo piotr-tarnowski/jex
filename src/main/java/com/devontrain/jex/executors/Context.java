@@ -9,10 +9,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static com.devontrain.jex.executors.internals.complete;
-import static com.devontrain.jex.executors.tasks.run;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -71,14 +71,26 @@ public class Context<K> {
                 complete(result, t, ex);
                 Holder<CompletableTask> holder = new Holder<>();
                 executor.contextClosingStrategy.accept(key, holder);
-                run(executor, this, holder);
+                executor.run(this, holder);
             }, executor);
         });
         return result;
     }
 
-    private CompletableFuture<?> process(List jobs,
-                                       CompletableTask task) {
+    final <C extends Context<K>> C computeForContext(
+            Consumer<Consumer<Context<K>>> consumer,
+            Function<C, C> lastTaskAction) {
+        C ctx = (C) this;
+        ctx.tasks.poll();
+        if (ctx.tasks.isEmpty()) {
+            return lastTaskAction.apply(ctx);
+        }
+        consumer.accept(ctx.tasks.peek());
+        return ctx;
+    }
+
+    private void process(List jobs,
+                         CompletableTask task) {
         if (paused) {
             if (jobs == null) {
                 jobs = subtasks = tasks.subList(0, 1);
@@ -87,12 +99,11 @@ public class Context<K> {
         } else {
             task.accept(this);
         }
-        return task;
     }
 
-    private CompletableFuture<?> process(List jobs,
-                                         Runnable runnable) {
-        return process(jobs, new RunnableTask<>(runnable, Boolean.TRUE));
+    private void process(List jobs,
+                         Runnable runnable) {
+        process(jobs, new RunnableTask<>(runnable, Boolean.TRUE));
     }
 
     private void ensureRunInSync() {

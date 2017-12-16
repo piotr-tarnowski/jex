@@ -32,87 +32,64 @@ public enum ContextResolvingStrategy {
     }
 
 
-    private static <K, C extends Context<K>> BiConsumer<K, CompletableTask> resolveContextInCallerThread(ExecutorBase<K, C> pool) {
-        return (key, task) -> invokeInCallerThread(pool, key, task, ctx -> task);
+    private static <K, C extends Context<K>> BiConsumer<K, CompletableTask> resolveContextInCallerThread(ExecutorBase<K, C> executor) {
+        return (key, task) -> invokeInCallerThread(executor, key, task, ctx -> task);
     }
 
-    private static <K, C extends Context<K>> BiConsumer<K, CompletableTask> resolveContextInTaskThread(ExecutorBase<K, C> pool) {
-        return (key, task) -> invokeInTaskThread(pool, key, task, ctx -> task);
+    private static <K, C extends Context<K>> BiConsumer<K, CompletableTask> resolveContextInTaskThread(ExecutorBase<K, C> executor) {
+        return (key, task) -> invokeInTaskThread(executor, key, task, ctx -> task);
     }
 
-    private static <K, C extends Context<K>> TriConsumer<K, Function<Context<K>, Object>, CompletableTask> resolveAssociateInCallerThread(ExecutorBase<K, C> pool) {
-        return (key, association, task) -> {
-            BooleanHolder holder = new BooleanHolder();
-            C context = resolveContext(pool, key, ctx -> {
-                Object associate = association.apply(ctx);
-                return c -> task.accept(associate);
-            }, holder);
-            if (holder.getAsBoolean()) {
-                pool.execute(() -> {
-                    context.processor = Thread.currentThread();
-                    task.run(pool, context);
-                });
-            }
-        };
+    private static <K, C extends Context<K>> TriConsumer<K, Function<Context<K>, Object>, CompletableTask> resolveAssociateInCallerThread(ExecutorBase<K, C> executor) {
+        return (key, association, task) -> invokeInCallerThread(executor, key, task, ctx -> {
+            Object associate = association.apply(ctx);
+            return c -> task.accept(associate);
+        });
     }
 
-    private static <K, C extends Context<K>> TriConsumer<K, Function<Context<K>, Object>, CompletableTask> resolveAssociateInTaskThread(ExecutorBase<K, C> pool) {
+    private static <K, C extends Context<K>> TriConsumer<K, Function<Context<K>, Object>, CompletableTask> resolveAssociateInTaskThread(ExecutorBase<K, C> executor) {
         return (key, association, task) -> {
             Holder<Function<Context<K>, Consumer<Context<K>>>> supplier = new Holder<>();
-            pool.contexts.compute(key, (k, ctx) -> {
+            executor.contexts.compute(key, (k, ctx) -> {
+                Function _association;
                 if (ctx == null) {
-                    supplier.accept(context -> c -> task.accept(association.apply(c)));
+                    _association = association;
                 } else {
                     Object associate = association.apply(ctx);
-                    supplier.accept(context -> c -> task.accept(associate));
+                    _association = c -> associate;
                 }
+                supplier.accept(context -> c -> task.accept(_association.apply(c)));
                 return ctx;
             });
-            invokeInTaskThread(pool, key, task, supplier.get());
+            invokeInTaskThread(executor, key, task, supplier.get());
         };
     }
 
-    private static <K, C extends Context<K>> void invokeInCallerThread(ExecutorBase<K, C> pool,
+    private static <K, C extends Context<K>> void invokeInCallerThread(ExecutorBase<K, C> executor,
                                                                        K key,
                                                                        CompletableTask task,
                                                                        Function<Context<K>, Consumer<Context<K>>> supplier) {
         BooleanHolder holder = new BooleanHolder();
-        C context = resolveContext(pool, key, supplier, holder);
+        C context = executor.resolveContext(key, supplier, holder);
         if (holder.getAsBoolean()) {
-            pool.execute(() -> {
+            executor.execute(() -> {
                 context.processor = Thread.currentThread();
-                task.run(pool, context);
+                task.run(executor, context);
             });
         }
     }
 
-    private static <K, C extends Context<K>> void invokeInTaskThread(ExecutorBase<K, C> pool,
+    private static <K, C extends Context<K>> void invokeInTaskThread(ExecutorBase<K, C> executor,
                                                                      K key,
                                                                      CompletableTask task,
                                                                      Function<Context<K>, Consumer<Context<K>>> supplier) {
-        pool.execute(() -> {
+        executor.execute(() -> {
             BooleanHolder holder = new BooleanHolder();
-            C context = resolveContext(pool, key, supplier, holder);
+            C context = executor.resolveContext(key, supplier, holder);
             if (holder.getAsBoolean()) {
                 context.processor = Thread.currentThread();
-                task.run(pool, context);
+                task.run(executor, context);
             }
         });
     }
-
-    @SuppressWarnings("unchecked")
-    private static <K, C extends Context<K>> C resolveContext(ExecutorBase<K, C> pool,
-                                                              K key,
-                                                              Function<Context<K>, ? extends Consumer> supplier,
-                                                              BooleanHolder holder) {
-        return pool.contexts.compute(key, (k, ctx) -> {
-            if (ctx == null) {
-                ctx = (C) pool.resolver.apply(pool, k);
-            }
-            holder.accept(ctx.tasks.isEmpty());
-            ctx.tasks.add((Consumer<Context<K>>) supplier.apply(ctx));
-            return ctx;
-        });
-    }
-
 }

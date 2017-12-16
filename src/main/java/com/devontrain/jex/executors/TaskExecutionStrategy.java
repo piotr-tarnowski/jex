@@ -3,9 +3,9 @@ package com.devontrain.jex.executors;
 import com.devontrain.jex.common.Holder;
 import com.devontrain.jex.executors.tasks.TriConsumer;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-import static com.devontrain.jex.executors.tasks.run;
 
 /**
  * Created by @author <a href="mailto:piotr.tarnowski.dev@gmail.com">Piotr Tarnowski</a> on 15.12.17.
@@ -13,36 +13,43 @@ import static com.devontrain.jex.executors.tasks.run;
 @SuppressWarnings("unchecked")
 public enum TaskExecutionStrategy {
 
-    NO_INTERRUPTION((executor, context, holder) -> {
-        while (holder.get() != null) {
-            holder.reset().accept(context);
-            executor.contextClosingStrategy.accept(context.key, holder);
-            if (context.paused) {
-                break;
-            }
-        }
-        context.processor = null;
-    }),
-    DEFINED_PREDICATE((executor, context, holder) -> {
-        while (holder.get() != null) {
-            boolean interrupt = Thread.interrupted() || executor.interruptionStrategy.test(context);
-            if (interrupt) {
-                executor.execute(() -> run(executor, context, holder));
-                break;
-            } else {
-                holder.reset().accept(context);
-                executor.contextClosingStrategy.accept(context.key, holder);
-                if (context.paused) {
-                    break;
-                }
-            }
-        }
-        context.processor = null;
-    });
+    NO_INTERRUPTION((executor, context, holder) -> handle(() ->
+            handleTask(executor, context, holder), holder)),
+    DEFINED_PREDICATE((executor, context, holder) -> handle(() ->
+            handleInterruption(executor, context, holder)
+            || handleTask(executor, context, holder), holder));
 
-    final TriConsumer<ExecutorBase, Context, Holder<Consumer>> strategy;
+    final TriConsumer<ExecutorBase, Context, Holder<? extends Consumer>> strategy;
 
-    TaskExecutionStrategy(TriConsumer<ExecutorBase, Context, Holder<Consumer>> strategy) {
+    TaskExecutionStrategy(TriConsumer<ExecutorBase, Context, Holder<? extends Consumer>> strategy) {
         this.strategy = strategy;
+    }
+
+    private static void handle(BooleanSupplier supplier,
+                               Holder holder) {
+        while (holder.get() != null) {
+            if (supplier.getAsBoolean()) {
+                break;
+            }
+        }
+    }
+
+    private static boolean handleInterruption(ExecutorBase executor,
+                                              Context context,
+                                              Holder<? extends Consumer> holder) {
+        boolean interrupt = Thread.interrupted() || executor.interruptionPredicate.test(context);
+        if (interrupt) {
+            executor.execute(() -> executor.run(context, holder));
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean handleTask(ExecutorBase executor,
+                                      Context context,
+                                      Holder<? extends Consumer> holder) {
+        holder.reset().accept(context);
+        executor.contextClosingStrategy.accept(context.key, holder);
+        return context.paused;
     }
 }

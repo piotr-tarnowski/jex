@@ -102,7 +102,7 @@ final class tasks {
         @SuppressWarnings("unchecked")
         final <K, C extends Context<K>> void run(ExecutorBase<K, C> executor,
                                                  C context) {
-            tasks.run(executor, context, new Holder<>(this));
+            executor.run(context, new Holder<>(this));
         }
 
         @Override
@@ -120,25 +120,5 @@ final class tasks {
         }
 
         abstract T apply(Object ctx) throws Exception;
-    }
-
-    @SuppressWarnings("unchecked")
-    static <K, C extends Context<K>> void run(ExecutorBase<K, C> executor,
-                                              C context,
-                                              Holder<? extends Consumer> holder) {
-        while (holder.get() != null) {
-            boolean interrupt = Thread.interrupted() || executor.interruptionStrategy.test(context);
-            if (interrupt) {
-                executor.execute(() -> run(executor, context, holder));
-                break;
-            } else {
-                holder.reset().accept(context);
-                executor.contextClosingStrategy.accept(context.key, holder);
-                if (context.paused) {
-                    break;
-                }
-            }
-        }
-        context.processor = null;
     }
 }

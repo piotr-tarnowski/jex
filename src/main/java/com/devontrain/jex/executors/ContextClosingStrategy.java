@@ -19,25 +19,13 @@ public enum ContextClosingStrategy {
         this.strategy = strategy;
     }
 
-    private static <K, C extends Context<K>> BiConsumer<K, Consumer<Consumer<Context<K>>>> leaveContextAfterLastTask(ExecutorBase<K, C> pool) {
+    private static <K, C extends Context<K>> BiConsumer<K, Consumer<Consumer<Context<K>>>> leaveContextAfterLastTask(ExecutorBase<K, C> executor) {
         return (key, consumer) ->
-                pool.contexts.computeIfPresent(key, (k, ctx) -> computeForContext(ctx, consumer, c -> c));
+                executor.contexts.computeIfPresent(key, (k, ctx) -> ctx.computeForContext(consumer, c -> c));
     }
 
-    private static <K, C extends Context<K>> BiConsumer<K, Consumer<Consumer<Context<K>>>> removeContextAfterLastTask(ExecutorBase<K, C> pool) {
+    private static <K, C extends Context<K>> BiConsumer<K, Consumer<Consumer<Context<K>>>> removeContextAfterLastTask(ExecutorBase<K, C> executor) {
         return (key, consumer) ->
-                pool.contexts.computeIfPresent(key, (k, ctx) -> computeForContext(ctx, consumer, c -> null));
-    }
-
-    private static <K, C extends Context<K>> C computeForContext(
-            C ctx,
-            Consumer<Consumer<Context<K>>> consumer,
-            Function<C, C> lastTaskAction) {
-        ctx.tasks.poll();
-        if (ctx.tasks.isEmpty()) {
-            return lastTaskAction.apply(ctx);
-        }
-        consumer.accept(ctx.tasks.peek());
-        return ctx;
+                executor.contexts.computeIfPresent(key, (k, ctx) -> ctx.computeForContext(consumer, c -> null));
     }
 }

@@ -72,38 +72,6 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
         return this;
     }
 
-    private void initialize(Function association) {
-        if (executor == null) {
-            executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        }
-        if (contexts == null) {
-            contexts = new ConcurrentHashMap<>();
-        }
-        if (resolver == null) {
-            resolver = Context::new;
-        }
-        if (contextClosingStrategy == null) {
-            contextClosingStrategy = REMOVE_CONTEXT_AFTER_LAST_TASK;
-        }
-        if (association == NO_ASSOCIATION) {
-            contextExecutionStrategy = CONTEXT;
-        } else {
-            contextExecutionStrategy = ASSOCIATE;
-        }
-        if (contextResolvingStrategy == null) {
-            contextResolvingStrategy = RESOLVE_CONTEXT_IN_CALLER_THREAD;
-        }
-        if (interruptionStrategy == null) {
-            interruptionStrategy = t -> false;
-        }
-        if (tasksLimit < 0) {
-            tasksLimit = 100;
-        }
-        if (joinTimeOut < 0) {
-            joinTimeOut = 250;
-        }
-    }
-
     public final ContextualExecutor<K, C> build() {
         initialize(NO_ASSOCIATION);
         return new ContextualExecutor<K, C>(
@@ -135,5 +103,34 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
                 tasksLimit,
                 joinTimeOut
         );
+    }
+    
+    private void initialize(Function association) {
+        if (executor == null) {
+            executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        }
+        if (contexts == null) {
+            contexts = new ConcurrentHashMap<>();
+        }
+        if (resolver == null) {
+            resolver = Context::new;
+        }
+        if (contextClosingStrategy == null) {
+            contextClosingStrategy = REMOVE_CONTEXT_AFTER_LAST_TASK;
+        }
+        if (association == NO_ASSOCIATION) {
+            contextExecutionStrategy = CONTEXT;
+        } else {
+            contextExecutionStrategy = ASSOCIATE;
+        }
+        if (contextResolvingStrategy == null) {
+            contextResolvingStrategy = RESOLVE_CONTEXT_IN_CALLER_THREAD;
+        }
+        if (tasksLimit < 0) {
+            tasksLimit = 100;
+        }
+        if (joinTimeOut < 0) {
+            joinTimeOut = 250;
+        }
     }
 }
