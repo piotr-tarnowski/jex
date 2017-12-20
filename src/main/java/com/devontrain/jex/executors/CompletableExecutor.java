@@ -2,7 +2,6 @@ package com.devontrain.jex.executors;
 
 import com.devontrain.jex.executors.tasks.CallableTask;
 import com.devontrain.jex.executors.tasks.RunnableTask;
-import com.sun.istack.internal.NotNull;
 
 import javax.annotation.Nonnull;
 import java.util.List;

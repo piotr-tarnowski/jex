@@ -3,6 +3,8 @@ package com.devontrain.jex.executors;
 import com.devontrain.jex.common.BooleanHolder;
 import com.devontrain.jex.common.Holder;
 
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -52,7 +54,7 @@ public enum ContextResolvingStrategy {
             Holder<Function<Context<K>, Consumer<Context<K>>>> supplier = new Holder<>();
             executor.contexts.compute(key, (k, ctx) -> {
                 Function _association;
-                if (ctx == null) {
+                if (ctx == null || ctx.getClass() == Context.class) {
                     _association = association;
                 } else {
                     Object associate = association.apply(ctx);
@@ -83,13 +85,41 @@ public enum ContextResolvingStrategy {
                                                                      K key,
                                                                      CompletableTask task,
                                                                      Function<Context<K>, Consumer<Context<K>>> supplier) {
-        executor.execute(() -> {
-            BooleanHolder holder = new BooleanHolder();
-            C context = executor.resolveContext(key, supplier, holder);
-            if (holder.getAsBoolean()) {
-                context.processor = Thread.currentThread();
-                task.run(executor, context);
+        executor.contexts.compute(key, (k, ctx) -> {
+            BooleanHolder empty = new BooleanHolder();
+            if (ctx == null) {
+                ctx = (C) new Context<>(executor, k);
             }
+            empty.accept(ctx.tasks.isEmpty());
+            if (Context.class == ctx.getClass()) {
+                ctx.tasks.add(supplier);
+            } else {
+                ctx.tasks.add(supplier.apply(ctx));
+            }
+            if (empty.getAsBoolean()) {
+                executor.execute(() -> {
+                    BooleanHolder holder = new BooleanHolder();
+                    C context = executor.contexts.compute(k, (k2, ctx2) -> {
+                        if (ctx2.getClass() == Context.class) {
+                            C newCtx = (C) executor.resolver.apply(executor, k2);
+                            for (Function<Context<K>, Consumer<Context<K>>> func : (Collection<Function<Context<K>, Consumer<Context<K>>>>) ctx2.tasks) {
+                                Consumer<Context<K>> consumer = func.apply(newCtx);
+                                newCtx.tasks.add(consumer);
+                            }
+                            ctx2 = newCtx;
+                        }
+                        holder.accept(empty.getAsBoolean());
+                        return ctx2;
+                    });
+//                        .recreateContext(key, empty.getAsBoolean(), supplier, holder);
+                    if (holder.getAsBoolean()) {
+                        System.err.println(Thread.currentThread().getName() + "!!!!" + empty.getAsBoolean() + "/" + context.tasks.size() + "/" + key + ":" + k);
+                        context.processor = Thread.currentThread();
+                        task.run(executor, context);
+                    }
+                });
+            }
+            return ctx;
         });
     }
 }

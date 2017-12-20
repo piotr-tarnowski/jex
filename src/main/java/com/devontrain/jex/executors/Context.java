@@ -28,7 +28,7 @@ public class Context<K> {
 
     protected final K key;
     private final ExecutorBase<K, Context<K>> executor;
-    final LinkedList<Consumer<Context<K>>> tasks;
+    final LinkedList/*<Consumer<Context<K>>> */tasks;
     private List<Consumer<Context<K>>> subtasks;
     boolean paused;
     Thread processor;
@@ -39,6 +39,10 @@ public class Context<K> {
         this.executor = executor;
         this.key = key;
         this.tasks = new LinkedList<>();
+    }
+
+    public K getKey() {
+        return key;
     }
 
     <A> A createAssociate() {
@@ -85,7 +89,13 @@ public class Context<K> {
         if (ctx.tasks.isEmpty()) {
             return lastTaskAction.apply(ctx);
         }
-        consumer.accept(ctx.tasks.peek());
+        Object peek = ctx.tasks.peek();
+        try {
+            Consumer<Context<K>> c = (Consumer<Context<K>>) peek;
+            consumer.accept(c);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return ctx;
     }
 

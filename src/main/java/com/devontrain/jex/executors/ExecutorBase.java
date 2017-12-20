@@ -28,7 +28,7 @@ public abstract class ExecutorBase<K, C extends Context> extends CompletableExec
     final int tasksLimit;
     final int joinTimeOut;
     final Predicate<C> interruptionPredicate;
-    private final BiFunction<ExecutorBase, K, Context> resolver;
+    final BiFunction<ExecutorBase, K, Context> resolver;
     private final BiFunction<K, CompletableTask, CompletableFuture> contextExecutionStrategy;
     private final TaskExecutionStrategy taskExecutionStrategy;
 
