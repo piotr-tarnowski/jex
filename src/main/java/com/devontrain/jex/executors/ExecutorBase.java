@@ -4,6 +4,7 @@ package com.devontrain.jex.executors;
 import com.devontrain.jex.common.BooleanHolder;
 import com.devontrain.jex.common.Holder;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -19,7 +20,6 @@ import static com.devontrain.jex.executors.tasks.*;
 @SuppressWarnings("unchecked")
 public abstract class ExecutorBase<K, C extends Context> extends CompletableExecutor {
 
-
     final Map<K, C> contexts;
     final Function<C, ?> association;
     final BiConsumer<K, Consumer> contextClosingStrategy;
@@ -31,8 +31,10 @@ public abstract class ExecutorBase<K, C extends Context> extends CompletableExec
     final BiFunction<ExecutorBase, K, Context> resolver;
     private final BiFunction<K, CompletableTask, CompletableFuture> contextExecutionStrategy;
     private final TaskExecutionStrategy taskExecutionStrategy;
+    private final LoggingStrategy loggingStrategy;
 
-    ExecutorBase(ExecutorService executor,
+    ExecutorBase(LoggingStrategy loggingStrategy,
+                 ExecutorService executor,
                  Map<K, C> contexts,
                  BiFunction<? extends ExecutorBase<K, C>, K, Context> resolver,
                  Function<C, ?> association,
@@ -43,6 +45,7 @@ public abstract class ExecutorBase<K, C extends Context> extends CompletableExec
                  int tasksLimit,
                  int joinTimeOut) {
         super(executor);
+        this.loggingStrategy = loggingStrategy;
         this.contexts = contexts;
         this.resolver = (BiFunction) resolver;
         this.association = association;
@@ -89,6 +92,21 @@ public abstract class ExecutorBase<K, C extends Context> extends CompletableExec
             }
             holder.accept(ctx.tasks.isEmpty());
             ctx.tasks.add((Consumer<Context<K>>) supplier.apply(ctx));
+            return ctx;
+        });
+    }
+
+    final C resolveContext(K key,
+                           Function<C, Collection<Function>> supplier) {
+        return contexts.compute(key, (k, ctx) -> {
+            if (ctx.getClass() == Context.class) {
+                C newCtx = (C) resolver.apply(this, k);
+                Collection<Function> tasks = supplier.apply(ctx);
+                for (Function task : tasks) {
+                    newCtx.tasks.add(task.apply(newCtx));
+                }
+                ctx = newCtx;
+            }
             return ctx;
         });
     }

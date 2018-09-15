@@ -92,7 +92,12 @@ final class tasks {
         @Override
         @SuppressWarnings("unchecked")
         Object apply(Object ctx) {
-            consumer.accept(ctx);
+            try {
+                consumer.accept(ctx);
+            }catch (Exception e){
+                e.printStackTrace();
+                System.exit(-1);
+            }
             return Boolean.TRUE;
         }
     }

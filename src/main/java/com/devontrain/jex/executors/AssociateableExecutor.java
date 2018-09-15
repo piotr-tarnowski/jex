@@ -12,7 +12,8 @@ import java.util.function.Predicate;
  */
 public class AssociateableExecutor<K, C extends Context<K>, A extends Associate<C>> extends ExecutorBase<K, C> implements internals.Submiter<K, A>, internals.Reporter<K, C> {
 
-    AssociateableExecutor(ExecutorService executor,
+    AssociateableExecutor(LoggingStrategy loggingStrategy,
+                          ExecutorService executor,
                           Map<K, C> contexts,
                           BiFunction<? extends ExecutorBase<K, C>, K, Context> resolver,
                           Function<C, ?> association,
@@ -22,6 +23,6 @@ public class AssociateableExecutor<K, C extends Context<K>, A extends Associate<
                           Predicate<C> interruptionStrategy,
                           int tasksLimit,
                           int joinTimeOut) {
-        super(executor, contexts, resolver, association, contextClosingStrategy, contextExecutionStrategy, contextResolvingStrategy, interruptionStrategy, tasksLimit, joinTimeOut);
+        super(loggingStrategy, executor, contexts, resolver, association, contextClosingStrategy, contextExecutionStrategy, contextResolvingStrategy, interruptionStrategy, tasksLimit, joinTimeOut);
     }
 }

@@ -1,10 +1,8 @@
 package com.devontrain.jex.executors;
 
 import com.devontrain.jex.common.BooleanHolder;
-import com.devontrain.jex.common.Holder;
 
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -43,28 +41,21 @@ public enum ContextResolvingStrategy {
     }
 
     private static <K, C extends Context<K>> TriConsumer<K, Function<Context<K>, Object>, CompletableTask> resolveAssociateInCallerThread(ExecutorBase<K, C> executor) {
-        return (key, association, task) -> invokeInCallerThread(executor, key, task, ctx -> {
-            Object associate = association.apply(ctx);
-            return c -> task.accept(associate);
-        });
+        return (key, association, task) -> invokeInCallerThread(executor, key, createAssociatedTask(association, task),
+                ctx -> {
+                    Object associate = association.apply(ctx);
+                    return c -> task.accept(associate);
+                }
+        );
     }
 
     private static <K, C extends Context<K>> TriConsumer<K, Function<Context<K>, Object>, CompletableTask> resolveAssociateInTaskThread(ExecutorBase<K, C> executor) {
-        return (key, association, task) -> {
-            Holder<Function<Context<K>, Consumer<Context<K>>>> supplier = new Holder<>();
-            executor.contexts.compute(key, (k, ctx) -> {
-                Function _association;
-                if (ctx == null || ctx.getClass() == Context.class) {
-                    _association = association;
-                } else {
+        return (key, association, task) -> invokeInTaskThread(executor, key, createAssociatedTask(association, task),
+                ctx -> {
                     Object associate = association.apply(ctx);
-                    _association = c -> associate;
+                    return c -> task.accept(associate);
                 }
-                supplier.accept(context -> c -> task.accept(_association.apply(c)));
-                return ctx;
-            });
-            invokeInTaskThread(executor, key, task, supplier.get());
-        };
+        );
     }
 
     private static <K, C extends Context<K>> void invokeInCallerThread(ExecutorBase<K, C> executor,
@@ -86,40 +77,30 @@ public enum ContextResolvingStrategy {
                                                                      CompletableTask task,
                                                                      Function<Context<K>, Consumer<Context<K>>> supplier) {
         executor.contexts.compute(key, (k, ctx) -> {
-            BooleanHolder empty = new BooleanHolder();
             if (ctx == null) {
                 ctx = (C) new Context<>(executor, k);
             }
-            empty.accept(ctx.tasks.isEmpty());
+            boolean empty = ctx.tasks.isEmpty();
             if (Context.class == ctx.getClass()) {
                 ctx.tasks.add(supplier);
             } else {
                 ctx.tasks.add(supplier.apply(ctx));
             }
-            if (empty.getAsBoolean()) {
+            if (empty) {
                 executor.execute(() -> {
-                    BooleanHolder holder = new BooleanHolder();
-                    C context = executor.contexts.compute(k, (k2, ctx2) -> {
-                        if (ctx2.getClass() == Context.class) {
-                            C newCtx = (C) executor.resolver.apply(executor, k2);
-                            for (Function<Context<K>, Consumer<Context<K>>> func : (Collection<Function<Context<K>, Consumer<Context<K>>>>) ctx2.tasks) {
-                                Consumer<Context<K>> consumer = func.apply(newCtx);
-                                newCtx.tasks.add(consumer);
-                            }
-                            ctx2 = newCtx;
-                        }
-                        holder.accept(empty.getAsBoolean());
-                        return ctx2;
-                    });
-//                        .recreateContext(key, empty.getAsBoolean(), supplier, holder);
-                    if (holder.getAsBoolean()) {
-                        System.err.println(Thread.currentThread().getName() + "!!!!" + empty.getAsBoolean() + "/" + context.tasks.size() + "/" + key + ":" + k);
-                        context.processor = Thread.currentThread();
-                        task.run(executor, context);
-                    }
+                    C context = executor.resolveContext(k, c -> (Collection<Function>) c.tasks);
+                    context.processor = Thread.currentThread();
+                    task.run(executor, context);
                 });
             }
             return ctx;
         });
+
+    }
+
+
+    private static <K> FutureTask createAssociatedTask(Function<Context<K>, Object> association,
+                                                       CompletableTask task) {
+        return new FutureTask(ctx -> task.accept(association.apply((Context<K>) ctx)));
     }
 }

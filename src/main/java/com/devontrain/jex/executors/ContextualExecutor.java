@@ -13,7 +13,8 @@ import java.util.function.Predicate;
 @SuppressWarnings("unchecked")
 public final class ContextualExecutor<K, C extends Context<K>> extends ExecutorBase<K, C> implements internals.Submiter<K, C>, internals.Reporter<K, C> {
 
-    ContextualExecutor(ExecutorService executor,
+    ContextualExecutor(LoggingStrategy loggingStrategy,
+                       ExecutorService executor,
                        Map contexts,
                        BiFunction resolver,
                        Function<C, ?> association,
@@ -23,6 +24,6 @@ public final class ContextualExecutor<K, C extends Context<K>> extends ExecutorB
                        Predicate<C> interruptionStrategy,
                        int tasksLimit,
                        int joinTimeOut) {
-        super(executor, contexts, resolver, association, contextClosingStrategy, contextExecutionStrategy, contextResolvingStrategy, interruptionStrategy, tasksLimit, joinTimeOut);
+        super(loggingStrategy, executor, contexts, resolver, association, contextClosingStrategy, contextExecutionStrategy, contextResolvingStrategy, interruptionStrategy, tasksLimit, joinTimeOut);
     }
 }

@@ -31,6 +31,12 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
     private Predicate<C> interruptionStrategy;
     private int tasksLimit = -1;
     private int joinTimeOut = -1;
+    private LoggingStrategy loggingStrategy;
+
+    public final ContextualExecutorBuilder<K, C> loggingStrategy(LoggingStrategy loggingStrategy) {
+        this.loggingStrategy = loggingStrategy;
+        return this;
+    }
 
     public final ContextualExecutorBuilder<K, C> executor(ExecutorService executor) {
         this.executor = executor;
@@ -72,9 +78,10 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
         return this;
     }
 
-    public final ContextualExecutor<K, C> build() {
-        initialize(NO_ASSOCIATION);
+    public final ContextualExecutor<K, C> build(String name) {
+        initialize(name, NO_ASSOCIATION);
         return new ContextualExecutor<K, C>(
+                loggingStrategy,
                 executor,
                 contexts,
                 resolver,
@@ -88,10 +95,12 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
         );
     }
 
-    public final <A extends Associate<T>, T extends Context<K>> AssociateableExecutor<K, T, A> build(Class<A> clazz,
+    public final <A extends Associate<T>, T extends Context<K>> AssociateableExecutor<K, T, A> build(String name,
+                                                                                                     Class<A> clazz,
                                                                                                      Function<T, A> association) {
-        initialize(association);
+        initialize(name, association);
         return new AssociateableExecutor<K, T, A>(
+                loggingStrategy,
                 executor,
                 (Map) contexts,
                 (BiFunction) resolver,
@@ -104,8 +113,14 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
                 joinTimeOut
         );
     }
-    
-    private void initialize(Function association) {
+
+    private void initialize(String name,
+                            Function association) {
+
+        if (loggingStrategy == null) {
+            loggingStrategy = new LoggingStrategy();
+        }
+        loggingStrategy.initialzie(name);
         if (executor == null) {
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         }

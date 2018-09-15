@@ -28,7 +28,7 @@ public class Context<K> {
 
     protected final K key;
     private final ExecutorBase<K, Context<K>> executor;
-    final LinkedList/*<Consumer<Context<K>>> */tasks;
+    final LinkedList/*<Consumer<Context<K>>>*/ tasks;
     private List<Consumer<Context<K>>> subtasks;
     boolean paused;
     Thread processor;
