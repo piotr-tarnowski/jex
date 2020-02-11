@@ -5,11 +5,12 @@ import java.io.*;
 /**
  * Created by @author <a href="mailto:piotr.tarnowski.dev@gmail.com">Piotr Tarnowski</a> on 20.12.17.
  */
-public class DevNUllLoggingStrategy extends LoggingStrategy {
+public class DevNUllLoggingStrategy extends AfterFileLoggingStrategy {
     private PrintStream out = System.out;
     private final PrintStream err = System.err;
 
     public DevNUllLoggingStrategy() {
+        super("");
         Runtime.getRuntime().addShutdownHook(new Thread(this::close));
     }
 

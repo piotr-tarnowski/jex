@@ -31,9 +31,9 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
     private Predicate<C> interruptionStrategy;
     private int tasksLimit = -1;
     private int joinTimeOut = -1;
-    private LoggingStrategy loggingStrategy;
+    private AfterFileLoggingStrategy loggingStrategy;
 
-    public final ContextualExecutorBuilder<K, C> loggingStrategy(LoggingStrategy loggingStrategy) {
+    public final ContextualExecutorBuilder<K, C> loggingStrategy(AfterFileLoggingStrategy loggingStrategy) {
         this.loggingStrategy = loggingStrategy;
         return this;
     }
@@ -118,9 +118,8 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
                             Function association) {
 
         if (loggingStrategy == null) {
-            loggingStrategy = new LoggingStrategy();
+            loggingStrategy = new AfterFileLoggingStrategy(name);
         }
-        loggingStrategy.initialzie(name);
         if (executor == null) {
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         }

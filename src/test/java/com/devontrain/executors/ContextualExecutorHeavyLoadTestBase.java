@@ -19,7 +19,7 @@ public abstract class ContextualExecutorHeavyLoadTestBase {
     static ExecutorService executor;
     static ContextualExecutor<Integer, TestContext> kexpool;
     static ConcurrentHashMap<Integer, ContextualExecutorHeavyLoadTestBase.TestContext> contexts;
-    static LoggingStrategy loggingStrategy = new DevNUllLoggingStrategy();
+    static AfterFileLoggingStrategy loggingStrategy = new DevNUllLoggingStrategy();
     List<Future<Integer>> futures = new ArrayList<>();
 
     void setUp() {

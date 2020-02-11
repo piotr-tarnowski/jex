@@ -37,7 +37,8 @@ public enum TaskExecutionStrategy {
     private static boolean handleInterruption(ExecutorBase executor,
                                               Context context,
                                               Holder<? extends Consumer> holder) {
-        boolean interrupt = Thread.interrupted() || executor.interruptionPredicate.test(context);
+        boolean interrupt = context.wasInterrupted
+                = !context.wasInterrupted && (Thread.interrupted() || executor.interruptionPredicate.test(context));
         if (interrupt) {
             executor.execute(() -> executor.run(context, holder));
             return true;
@@ -50,6 +51,6 @@ public enum TaskExecutionStrategy {
                                       Holder<? extends Consumer> holder) {
         holder.reset().accept(context);
         executor.contextClosingStrategy.accept(context.key, holder);
-        return context.paused;
+        return context.paused || /*ADDED*/ context.tasks.isEmpty();
     }
 }

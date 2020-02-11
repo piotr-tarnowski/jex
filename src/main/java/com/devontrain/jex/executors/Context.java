@@ -31,9 +31,9 @@ public class Context<K> {
     final LinkedList/*<Consumer<Context<K>>>*/ tasks;
     private List<Consumer<Context<K>>> subtasks;
     boolean paused;
+    boolean wasInterrupted = false;
     Thread processor;
 
-    //TODO: try to remove this suppress warnings
     protected Context(ExecutorBase executor,
                       K key) {
         this.executor = executor;

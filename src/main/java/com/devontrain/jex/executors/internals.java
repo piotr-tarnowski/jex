@@ -41,7 +41,7 @@ class internals {
         }
 
         @SuppressWarnings("unchecked")
-        default <A, T> CompletableFuture<T> report(K key, Function<C, A> association, Function<C, T> callable) {
+        default <A, T> CompletableFuture<T> report(K key, Function<C, A> association, Function<A, T> callable) {
             return ((ExecutorBase) this).execute(key, association, new ContextCallableTask<>(callable));
         }
 
