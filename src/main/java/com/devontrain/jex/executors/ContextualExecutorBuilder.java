@@ -1,6 +1,9 @@
 package com.devontrain.jex.executors;
 
 
+import com.devontrain.jex.logging.FileLoggingStrategy;
+import com.devontrain.jex.logging.LoggingStrategyFactory;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -31,9 +34,9 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
     private Predicate<C> interruptionStrategy;
     private int tasksLimit = -1;
     private int joinTimeOut = -1;
-    private AfterFileLoggingStrategy loggingStrategy;
+    private FileLoggingStrategy loggingStrategy;
 
-    public final ContextualExecutorBuilder<K, C> loggingStrategy(AfterFileLoggingStrategy loggingStrategy) {
+    public final ContextualExecutorBuilder<K, C> loggingStrategy(FileLoggingStrategy loggingStrategy) {
         this.loggingStrategy = loggingStrategy;
         return this;
     }
@@ -118,7 +121,7 @@ public class ContextualExecutorBuilder<K, C extends Context<K>> {
                             Function association) {
 
         if (loggingStrategy == null) {
-            loggingStrategy = new AfterFileLoggingStrategy(name);
+            loggingStrategy = new LoggingStrategyFactory().createFileLoggingStrategy(name);
         }
         if (executor == null) {
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());

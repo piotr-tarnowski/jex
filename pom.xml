@@ -25,6 +25,10 @@
             <organization>DevOnTrain</organization>
             <organizationUrl>http://www.devontrain.com</organizationUrl>
         </developer>
+        <developer>
+            <name>Lukasz Palt</name>
+            <email>lukasz.palt@gmail.com</email>
+        </developer>
     </developers>
 
     <scm>
@@ -46,19 +50,35 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <org.aspectj.version>1.9.5</org.aspectj.version>
     </properties>
 
    <dependencies>
-        <dependency>
+       <dependency>
+           <groupId>com.google.code.findbugs</groupId>
+           <artifactId>jsr305</artifactId>
+           <version>2.0.1</version>
+       </dependency>
+       <dependency>
+           <groupId>org.aspectj</groupId>
+           <artifactId>aspectjrt</artifactId>
+           <version>${org.aspectj.version}</version>
+       </dependency>
+       <dependency>
+           <groupId>org.aspectj</groupId>
+           <artifactId>aspectjweaver</artifactId>
+           <version>${org.aspectj.version}</version>
+       </dependency>
+       <dependency>
+           <groupId>org.aspectj</groupId>
+           <artifactId>aspectjtools</artifactId>
+           <version>1.9.5</version>
+       </dependency>
+       <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-            <version>2.0.1</version>
         </dependency>
        <dependency>
            <groupId>org.junit.jupiter</groupId>
@@ -161,6 +181,30 @@
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>1.7</version>
+                <configuration>
+                    <complianceLevel>1.8</complianceLevel>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <showWeaveInfo>true</showWeaveInfo>
+                    <verbose>true</verbose>
+                    <Xlint>ignore</Xlint>
+                    <encoding>UTF-8 </encoding>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <!-- use this goal to weave all your main classes -->
+                            <goal>compile</goal>
+                            <!-- use this goal to weave all your test classes -->
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
         <pluginManagement>

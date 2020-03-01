@@ -1,4 +1,4 @@
-package com.devontrain.jex.executors;
+package com.devontrain.jex.logging;
 
 public interface LoggingStrategy {
     void info(String message,

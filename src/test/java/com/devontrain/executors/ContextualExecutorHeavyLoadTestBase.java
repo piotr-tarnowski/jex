@@ -1,6 +1,8 @@
 package com.devontrain.executors;
 
 import com.devontrain.jex.executors.*;
+import com.devontrain.jex.logging.FileLoggingStrategy;
+import com.devontrain.jex.logging.ConsoleLoggingStrategy;
 import org.junit.jupiter.api.*;
 
 import java.util.ArrayList;
@@ -19,7 +21,7 @@ public abstract class ContextualExecutorHeavyLoadTestBase {
     static ExecutorService executor;
     static ContextualExecutor<Integer, TestContext> kexpool;
     static ConcurrentHashMap<Integer, ContextualExecutorHeavyLoadTestBase.TestContext> contexts;
-    static AfterFileLoggingStrategy loggingStrategy = new DevNUllLoggingStrategy();
+    static FileLoggingStrategy loggingStrategy = new ConsoleLoggingStrategy();
     List<Future<Integer>> futures = new ArrayList<>();
 
     void setUp() {

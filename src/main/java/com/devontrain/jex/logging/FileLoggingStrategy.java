@@ -1,18 +1,20 @@
-package com.devontrain.jex.executors;
+package com.devontrain.jex.logging;
 
 import java.io.*;
 
 /**
  * Created by @author <a href="mailto:piotr.tarnowski.dev@gmail.com">Piotr Tarnowski</a> on 20.12.17.
  */
-public class AfterFileLoggingStrategy implements LoggingStrategy {
+// ToDo [LP]: this class most probably needs renaming.
+public class FileLoggingStrategy implements LoggingStrategy {
+
+    private static final PrintStream ERR = System.err;
     private final File file;
     private final PrintStream out;
-    private final PrintStream err = System.err;
 
-    public AfterFileLoggingStrategy(String fileName) {
+    FileLoggingStrategy(String fileName) {
         file = new File("c.d.j.Executor_" + fileName);
-        err.println("less " + file.getAbsolutePath());
+        ERR.println("less " + file.getAbsolutePath());
         try {
             out = new PrintStream(file);
         } catch (FileNotFoundException e) {
@@ -25,8 +27,7 @@ public class AfterFileLoggingStrategy implements LoggingStrategy {
         if (file == null) return;
         if (out == null) return;
         out.close();
-        try {
-            BufferedReader in = new BufferedReader(new FileReader(file));
+        try (BufferedReader in = new BufferedReader(new FileReader(file));) {
             String line;
             while ((line = in.readLine()) != null) {
                 System.out.println(line);
@@ -34,7 +35,7 @@ public class AfterFileLoggingStrategy implements LoggingStrategy {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        err.println("less " + file.getAbsolutePath());
+        ERR.println("less " + file.getAbsolutePath());
     }
 
     @Override
@@ -46,7 +47,7 @@ public class AfterFileLoggingStrategy implements LoggingStrategy {
     @Override
     public void error(String message,
                       Object... args) {
-        err.println(message);
+        ERR.println(message);
     }
 
 }

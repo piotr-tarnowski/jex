@@ -1,6 +1,8 @@
 package com.devontrain.jex.executors;
 
 
+import com.devontrain.jex.logging.LoggingStrategy;
+
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
